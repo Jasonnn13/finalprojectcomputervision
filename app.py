@@ -139,7 +139,7 @@ if uploaded is not None and os.path.exists(MODEL_PATH):
         col1, col2 = st.columns([1, 1])
         with col1:
             st.subheader("Preview")
-            st.image(image, caption="Uploaded CT image", use_container_width=True)
+            st.image(image, caption="Uploaded CT image", use_column_width=True)
         with col2:
             st.subheader("Prediction")
             model, num_classes = load_model(MODEL_PATH)  # ensure loaded
