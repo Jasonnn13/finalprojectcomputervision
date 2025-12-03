@@ -8,6 +8,8 @@ torch.classes.__path__ = []
 import torch.nn as nn
 from PIL import Image
 
+from pathlib import Path
+
 
 # Fixed class mapping provided by user
 CLASS_TO_LABEL = {
@@ -132,6 +134,14 @@ def predict(model: nn.Module, tensor: torch.Tensor) -> Tuple[int, float, np.ndar
 
 
 st.set_page_config(page_title="CT Scan Classifier", page_icon="🩺", layout="centered")
+# Resolve static asset directory robustly (works locally and on Streamlit Cloud)
+APP_DIR = Path(__file__).parent.resolve()
+_public_candidates = [
+	APP_DIR / "public",
+	Path.cwd() / "public",
+	APP_DIR.parent / "public",
+]
+PUBLIC_DIR = next((p for p in _public_candidates if p.exists()), _public_candidates[0])
 st.title("Detect Chest Cancer with CTSense")
 st.caption("Fast, Accurate, and Effortless!")
 col1, col2 = st.columns([2, 1])
@@ -145,10 +155,21 @@ with col1:
     st.button("Start Detecting")
 
 with col2:
-    try:
-        st.image("public/1.png", use_container_width=True, width=500)
-    except Exception:
-        st.info("Place an image at public/1.png to display here.")
+	# Prefer local static image if present; fallback to remote URL
+	hero_local = PUBLIC_DIR / "1.png"
+	if hero_local.exists():
+		st.image(str(hero_local), use_container_width=True, width=500)
+		st.caption(f"Loaded hero from: {hero_local}")
+	else:
+		tried_remote = False
+		try:
+			st.image("https://i.ibb.co/rRGQt17/1.png", use_container_width=True, width=500)
+			tried_remote = True
+			st.caption("Loaded hero from remote fallback.")
+		except Exception:
+			pass
+		if not tried_remote:
+			st.info("Place an image at `public/1.png` to display here.")
         
 
 # Info section below start button
@@ -253,18 +274,49 @@ with st.sidebar:
 
 	st.subheader("Training Curves")
 	shown_any = False
-	for path, label in [    
-		("public/acc.png", "Accuracy"),
-		("public/loss.png", "Loss"),
+	for rel, label in [    
+		("acc.png", "Accuracy"),
+		("loss.png", "Loss"),
 	]:
-		try:
-			st.caption(label)
-			st.image(path, use_container_width=True)
+		img_path = PUBLIC_DIR / rel
+		if img_path.exists():
+			st.caption(f"{label} (from {img_path.name})")
+			st.image(str(img_path), use_container_width=True)
 			shown_any = True
-		except Exception:
-			pass
+		else:
+			# Fallback: try working-directory relative
+			fallback_path = Path("public") / rel
+			try:
+				st.caption(f"{label} (fallback {fallback_path})")
+				st.image(str(fallback_path), use_container_width=True)
+				shown_any = True
+			except Exception:
+				pass
 	if not shown_any:
 		st.caption("Place images like public/acc.png and public/loss.png to display here.")
+
+	# Debug: show resolved paths and found files to diagnose deployment issues
+	with st.expander("Debug: Static Assets"):
+		st.write(f"App dir: `{APP_DIR}`")
+		st.write(f"CWD: `{Path.cwd()}`")
+		st.write("Public candidates:")
+		for idx, cand in enumerate(_public_candidates, 1):
+			st.text(f"{idx}. {cand} | exists={cand.exists()}")
+		st.write(f"Chosen PUBLIC_DIR: `{PUBLIC_DIR}` | exists={PUBLIC_DIR.exists()}")
+		try:
+			entries = []
+			if PUBLIC_DIR.exists():
+				for p in sorted(PUBLIC_DIR.glob("*")):
+					entries.append(f"{p.name} | size={(p.stat().st_size if p.exists() else 0)}")
+			st.write("PUBLIC_DIR contents:")
+			if entries:
+				for e in entries:
+					st.text(e)
+			else:
+				st.text("(empty or missing)")
+		except Exception as e:
+			st.write("Error listing PUBLIC_DIR:")
+			st.exception(e)
 
 
 @st.cache_resource(show_spinner=False)
