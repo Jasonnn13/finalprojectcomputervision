@@ -12,11 +12,27 @@ from torchvision.models import convnext_large
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "CTScan_ConvNeXtLarge.pth")
 
+def _is_lfs_pointer(path: str) -> bool:
+    try:
+        with open(path, "rb") as f:
+            head = f.read(256)
+        return b"git-lfs" in head or head.startswith(b"version https://git-lfs.github.com/spec")
+    except Exception:
+        return False
+
 @st.cache_resource(show_spinner=True)
 def load_model(model_path: str) -> Tuple[nn.Module, int]:
     # Build base model
     model = convnext_large(weights=None)
-    ckpt = torch.load(model_path, map_location="cpu")
+    # Detect common issue: LFS pointer file not downloaded
+    if _is_lfs_pointer(model_path):
+        raise RuntimeError(
+            "Model file appears to be a Git LFS pointer. Run 'git lfs pull' or 'git lfs checkout' to download the actual binary."
+        )
+    try:
+        ckpt = torch.load(model_path, map_location="cpu", weights_only=False)
+    except TypeError:
+        ckpt = torch.load(model_path, map_location="cpu")
     if isinstance(ckpt, dict) and "state_dict" in ckpt:
         state_dict = ckpt["state_dict"]
     else:
@@ -101,9 +117,13 @@ with st.sidebar:
     if not os.path.exists(MODEL_PATH):
         st.error("Model file not found: CTScan_ConvNeXtLarge.pth")
     else:
-        model, num_classes = load_model(MODEL_PATH)
-        st.success(f"Loaded ConvNeXt-Large with {num_classes} classes")
-        st.caption(f"Checkpoint: {os.path.basename(MODEL_PATH)}")
+        try:
+            model, num_classes = load_model(MODEL_PATH)
+            st.success(f"Loaded ConvNeXt-Large with {num_classes} classes")
+            st.caption(f"Checkpoint: {os.path.basename(MODEL_PATH)}")
+        except Exception as e:
+            st.error(f"Failed to load model: {e}")
+            st.caption("If this is an LFS pointer, run 'git lfs pull' in the repo.")
 
 uploaded = st.file_uploader("Upload CT image (PNG/JPG)", type=["png", "jpg", "jpeg"])
 
@@ -119,7 +139,8 @@ if uploaded is not None and os.path.exists(MODEL_PATH):
         col1, col2 = st.columns([1, 1])
         with col1:
             st.subheader("Preview")
-            st.image(image, caption="Uploaded CT image", use_container_width=True)
+            # Streamlit deprecates/use different arg: use_column_width instead of use_container_width
+            st.image(image, caption="Uploaded CT image", use_column_width=True)
         with col2:
             st.subheader("Prediction")
             model, num_classes = load_model(MODEL_PATH)  # ensure loaded
