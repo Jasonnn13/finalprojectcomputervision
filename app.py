@@ -4,6 +4,7 @@ from typing import List, Optional, Tuple
 import numpy as np
 import streamlit as st
 import torch
+torch.classes.__path__ = []
 import torch.nn as nn
 from PIL import Image
 
@@ -273,6 +274,7 @@ if uploaded is not None:
 		pred_label = class_names[idx] if idx < len(class_names) else f"Class {idx}"
 		st.success(f"Predicted Class ID: {idx}")
 		st.write(f"Label: {pred_label}  (confidence: {conf:.2%})")
+
 else:
 	st.info("Please upload an image to begin.")
 

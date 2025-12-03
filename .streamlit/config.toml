@@ -1,0 +1,5 @@
+[server]
+# Disable module file watcher to avoid torch.classes scan issues on Windows/Python 3.12
+fileWatcherType = "none"
+# Also stop auto-rerun on save to avoid stray editor temp-file events
+runOnSave = false
