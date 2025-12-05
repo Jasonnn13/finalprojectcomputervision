@@ -224,7 +224,7 @@ st.subheader("What Is Chest Cancer?")
 st.write(
 	"Chest cancer refers to several types of cancers that form in the tissues of the lungs. "
 	"These cancers grow uncontrollably and can interfere with your breathing, oxygen levels, and overall health. "
-	"Some types grow slowly, while others spread quickly—early detection is crucial."
+	"Some types grow slowly, while others spread quickly. Early detection is crucial."
 )
 
 st.subheader("Main Types of Chest Cancer")
