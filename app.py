@@ -139,11 +139,7 @@ st.set_page_config(page_title="CT Scan Classifier", page_icon="🩺", layout="ce
 st.markdown("""
 <style>
     /* Main Background & Fonts */
-    .stApp {
-        background-color: #fcfdfd;
-    }
     h1, h2, h3 {
-        color: #2c3e50;
         font-family: 'Helvetica Neue', sans-serif;
     }
     h1 {
