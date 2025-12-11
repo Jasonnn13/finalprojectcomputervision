@@ -232,7 +232,7 @@ with col1:
 with col2:
 	# Prefer local static image if present; fallback to remote URL
 	hero_local = PUBLIC_DIR / "1.png"
-	st.image(str(hero_local), width='stretch', width=500)
+	st.image(str(hero_local), width='stretch')
 
 # --- INFO SECTION ---
 st.divider()
