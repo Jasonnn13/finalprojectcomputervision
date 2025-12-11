@@ -2,6 +2,7 @@ import io
 from typing import List, Optional, Tuple
 
 import numpy as np
+import requests
 import streamlit as st
 import torch
 torch.classes.__path__ = []
@@ -10,6 +11,8 @@ from PIL import Image
 
 from pathlib import Path
 
+hugging_face_model_link = "https://huggingface.co/spaces/Jasonnn13/CTScan_ConvNeXtLarge.pth/resolve/main/CTScan_ConvNeXtLarge.pth"
+MODEL_FILENAME = "CTScan_ConvNeXtLarge.pth"
 
 # Fixed class mapping provided by user
 CLASS_TO_LABEL = {
@@ -187,6 +190,25 @@ _public_candidates = [
 	APP_DIR.parent / "public",
 ]
 PUBLIC_DIR = next((p for p in _public_candidates if p.exists()), _public_candidates[0])
+MODEL_PATH = APP_DIR / MODEL_FILENAME
+
+
+def _download_weights(url: str, destination: Path) -> None:
+	# Stream download to avoid holding large weights in memory
+	response = requests.get(url, stream=True, timeout=60)
+	response.raise_for_status()
+	destination.parent.mkdir(parents=True, exist_ok=True)
+	with destination.open("wb") as fh:
+		for chunk in response.iter_content(chunk_size=8192):
+			if chunk:
+				fh.write(chunk)
+
+
+def _ensure_model_file() -> Path:
+	if MODEL_PATH.exists():
+		return MODEL_PATH
+	_download_weights(hugging_face_model_link, MODEL_PATH)
+	return MODEL_PATH
 
 # --- HERO SECTION ---
 st.title("Detect Chest Cancer with CTSense")
@@ -309,7 +331,8 @@ with st.sidebar:
 
 @st.cache_resource(show_spinner=False)
 def _load_once():
-	return load_model("CTScan_ConvNeXtLarge.pth")
+	weights_path = _ensure_model_file()
+	return load_model(str(weights_path))
 
 
 try:
